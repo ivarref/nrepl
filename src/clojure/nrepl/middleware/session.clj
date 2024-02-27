@@ -17,6 +17,7 @@
                          TimeUnit)))
 
 (def ^{:private true} sessions (atom {}))
+(defonce most-recent-transport (atom nil))
 
 (defn close-all-sessions!
   "Use this fn to manually shut down all sessions. Since each new session spanws
@@ -253,7 +254,9 @@
         {:keys [id]} (meta session)]
     (alter-meta! session into (session-exec id))
     (swap! sessions assoc id session)
-    (t/send transport (response-for msg :status :done :new-session id))))
+    (let [v (t/send transport (response-for msg :status :done :new-session id))]
+      (reset! most-recent-transport [v id])
+      v)))
 
 (defn- interrupt-session
   [{:keys [session interrupt-id transport] :as msg}]
@@ -282,6 +285,11 @@
   (let [{:keys [close] session-id :id} (meta session)]
     (when close (close))
     (swap! sessions dissoc session-id)
+    (swap! most-recent-transport
+           (fn [[_transp sess-id :as ov]]
+             (if (= sess-id session-id)
+               nil
+               ov)))
     (t/send transport (response-for msg :status #{:done :session-closed}))))
 
 (defn session

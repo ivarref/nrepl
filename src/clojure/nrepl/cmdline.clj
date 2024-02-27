@@ -11,6 +11,7 @@
    [nrepl.core :as nrepl]
    [nrepl.ack :refer [send-ack]]
    [nrepl.misc :refer [noisy-future]]
+   [nrepl.redirect-stdout-stderr :as redirect-stdout-stderr]
    [nrepl.server :as nrepl-server]
    [nrepl.socket :as socket]
    [nrepl.transport :as transport]
@@ -486,6 +487,7 @@ Exit:      Control+D or (exit) or (quit)"
         (:version options) (display-version)
         (:connect options) (connect-to-server (connection-opts options))
         :else (let [options (server-opts options)
+                    _ (redirect-stdout-stderr/redirect! false)
                     server (start-server options)]
                 (ack-server server options)
                 (println (server-started-message server options))
